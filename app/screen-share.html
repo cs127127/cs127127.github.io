@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Screen Sharing V2</title>
+    <title>Screen Sharing V2 - Fixed</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root {
@@ -44,7 +44,7 @@
 
     <div class="control-panel">
         <h1>Screen Sharing</h1>
-        <p class="desc">V2</p>
+        <p class="desc">V2 - Stable</p>
         <div class="input-group">
             <input type="text" id="roomName" placeholder="Room Name">
             <input type="password" id="passcode" placeholder="Passcode">
@@ -53,7 +53,7 @@
             <button id="btnHost" class="btn-share">Share Screen</button>
             <button id="btnJoin" class="btn-join">Join Room</button>
         </div>
-        <button id="btnStop" class="btn-stop">Disconnect</button>
+        <button id="btnStop" class="btn-stop">Disconnect / Stop</button>
         <div id="statusLabel" class="status">Ready</div>
     </div>
 
@@ -65,29 +65,24 @@
         let peer = null;
         let localStream = null;
 
-        /**
-         * EDUROAM OPTIMIZATION:
-         * 1. Use OpenRelay public TURN servers on port 443 (looks like HTTPS traffic).
-         * 2. Force 'relay' policy to skip failed P2P attempts in strict NATs.
-         */
+        // --- 修正后的 Peer 配置 ---
         const peerConfig = {
-    config: {
-        'iceServers': [
-            {
-                urls: 'turns:openrelay.metered.ca:443?transport=tcp',
-                username: 'openrelayproject',
-                credential: 'openrelayproject'
-            },
-            {
-                urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-                username: 'openrelayproject',
-                credential: 'openrelayproject'
+            config: {
+                'iceServers': [
+                    {
+                        urls: 'turns:openrelay.metered.ca:443?transport=tcp',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    },
+                    {
+                        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+                        username: 'openrelayproject',
+                        credential: 'openrelayproject'
+                    }
+                ],
+                'iceTransportPolicy': 'relay'
             }
-        ],
-        'iceTransportPolicy': 'relay', 
-        'iceCandidatePoolSize': 0
-    }
-};
+        };
 
         const el = {
             room: document.getElementById('roomName'),
@@ -110,35 +105,45 @@
             return r && p ? `as_v2_${r}_${p}` : null;
         }
 
-        // --- HOST LOGIC ---
+        // --- 重置 UI 和清理连接 ---
+        function resetUI() {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            if (peer) {
+                peer.destroy();
+                peer = null;
+            }
+            el.video.srcObject = null;
+            el.btnStop.style.display = 'none';
+            el.btnHost.disabled = false;
+            el.btnJoin.disabled = false;
+            setStatus("Ready");
+            // location.reload(); // 如果想彻底重置可以使用这个
+        }
+
+        // --- HOST 逻辑 ---
         el.btnHost.onclick = async () => {
-            // 1. 立即检查输入，不涉及异步操作
             const id = getFullId();
             if (!id) return alert("Please enter Room Name and Passcode");
         
             try {
-                // 2. 必须先触发弹窗！不要在这一行之前放置任何 await 操作
-                // 这样可以确保浏览器识别到这是由用户点击直接触发的
+                // 必须先触发弹窗
                 const stream = await navigator.mediaDevices.getDisplayMedia({ 
-                    video: { 
-                        frameRate: { max: 15 }, 
-                        width: { max: 1280 } 
-                    }, 
+                    video: { frameRate: { max: 15 }, width: { max: 1280 } }, 
                     audio: false 
                 });
         
-                // 3. 弹窗成功后，再初始化 Peer 和后续逻辑
                 localStream = stream;
                 peer = new Peer(id, peerConfig);
         
                 peer.on('open', () => {
                     el.video.srcObject = localStream;
-                    el.video.style.display = 'block';
-                    el.placeholder.style.display = 'none';
                     el.btnStop.style.display = 'block';
                     el.btnHost.disabled = true;
                     el.btnJoin.disabled = true;
-                    setStatus("Live (Relayed via OpenRelay)");
+                    setStatus("Live (Sharing Screen)");
                 });
         
                 peer.on('call', (call) => {
@@ -146,24 +151,21 @@
                 });
         
                 peer.on('error', (err) => {
+                    console.error("Peer Error:", err);
                     if (err.type === 'id-taken') alert("Room occupied!");
                     resetUI();
                 });
         
-                // 处理用户点击“停止共享”按钮的情况
+                // 监听浏览器自带的“停止共享”按钮
                 localStream.getVideoTracks()[0].onended = () => resetUI();
         
-                    } catch (e) {
-                        console.error("Capture Error:", e);
-                        if (e.name === 'NotAllowedError') {
-                            alert("Permission Denied: Please enable 'Screen Recording' in System Settings (macOS) or allow browser permissions.");
-                        } else {
-                            setStatus("Error: " + e.message, true);
-                        }
-                    }
-            };
+            } catch (e) {
+                console.error("Capture Error:", e);
+                setStatus("Error: " + e.message, false);
+            }
+        };
 
-        // --- VIEWER LOGIC ---
+        // --- VIEWER 逻辑 ---
         el.btnJoin.onclick = () => {
             const hostId = getFullId();
             if(!hostId) return alert("Please enter Room Name and Passcode");
@@ -171,16 +173,16 @@
             peer = new Peer(peerConfig);
             
             peer.on('open', () => {
-                setStatus("Connecting via TURN Relay...");
+                setStatus("Connecting to Host...");
                 
-                // Create dummy stream to trigger WebRTC handshake
+                // 发起呼叫 (PeerJS 需要传一个流，即使是空的)
                 const canvas = document.createElement('canvas');
                 canvas.width = canvas.height = 1;
                 const call = peer.call(hostId, canvas.captureStream());
 
                 call.on('stream', stream => {
                     el.video.srcObject = stream;
-                    setStatus("Connected (Relayed)");
+                    setStatus("Connected (Viewing)");
                     el.btnStop.style.display = 'block';
                     el.btnHost.disabled = el.btnJoin.disabled = true;
                 });
@@ -191,7 +193,7 @@
             });
         };
 
-        el.btnStop.onclick = () => location.reload();
+        el.btnStop.onclick = () => resetUI();
     </script>
 </body>
 </html>
