@@ -1,2 +1,10 @@
 # cs127127.github.io
-## This is just a small website where I put some tiny apps that are helpful to me :)
+
+This is a personal space where I host small, functional apps that I find helpful in my daily workflow.
+
+---
+
+### [🌐 Go there!](https://cs127127.github.io/app)
+
+---
+*Latest updates: Xiangqi, Screen-Share.*
