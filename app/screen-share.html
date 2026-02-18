@@ -112,34 +112,56 @@
 
         // --- HOST LOGIC ---
         el.btnHost.onclick = async () => {
+            // 1. 立即检查输入，不涉及异步操作
             const id = getFullId();
-            if(!id) return alert("Please enter Room Name and Passcode");
-
+            if (!id) return alert("Please enter Room Name and Passcode");
+        
             try {
-                // BITRATE OPTIMIZATION: 720p @ 15fps is more stable on crowded Wi-Fi
-                localStream = await navigator.mediaDevices.getDisplayMedia({ 
-                    video: { frameRate: { max: 15 }, width: { max: 1280 } }, 
+                // 2. 必须先触发弹窗！不要在这一行之前放置任何 await 操作
+                // 这样可以确保浏览器识别到这是由用户点击直接触发的
+                const stream = await navigator.mediaDevices.getDisplayMedia({ 
+                    video: { 
+                        frameRate: { max: 15 }, 
+                        width: { max: 1280 } 
+                    }, 
                     audio: false 
                 });
-                
+        
+                // 3. 弹窗成功后，再初始化 Peer 和后续逻辑
+                localStream = stream;
                 peer = new Peer(id, peerConfig);
-                
+        
                 peer.on('open', () => {
                     el.video.srcObject = localStream;
-                    setStatus("Sharing via Relay (Eduroam Compatible)");
+                    el.video.style.display = 'block';
+                    el.placeholder.style.display = 'none';
                     el.btnStop.style.display = 'block';
-                    el.btnHost.disabled = el.btnJoin.disabled = true;
+                    el.btnHost.disabled = true;
+                    el.btnJoin.disabled = true;
+                    setStatus("Live (Relayed via OpenRelay)");
                 });
-
-                peer.on('call', call => call.answer(localStream));
-                
-                localStream.getVideoTracks()[0].onended = () => location.reload();
-
-            } catch (e) {
-                console.error(e);
-                setStatus("Permission Denied", false);
-            }
-        };
+        
+                peer.on('call', (call) => {
+                    call.answer(localStream);
+                });
+        
+                peer.on('error', (err) => {
+                    if (err.type === 'id-taken') alert("Room occupied!");
+                    resetUI();
+                });
+        
+                // 处理用户点击“停止共享”按钮的情况
+                localStream.getVideoTracks()[0].onended = () => resetUI();
+        
+                    } catch (e) {
+                        console.error("Capture Error:", e);
+                        if (e.name === 'NotAllowedError') {
+                            alert("Permission Denied: Please enable 'Screen Recording' in System Settings (macOS) or allow browser permissions.");
+                        } else {
+                            setStatus("Error: " + e.message, true);
+                        }
+                    }
+            };
 
         // --- VIEWER LOGIC ---
         el.btnJoin.onclick = () => {
