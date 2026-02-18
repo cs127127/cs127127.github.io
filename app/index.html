@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Portal</title>
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --hover-color: #3f37c9;
+            --bg-gradient: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            --text-main: #2b2d42;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            margin: auto;
+        }
+
+        h1 {
+            text-align: center;
+            font-weight: 700;
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            letter-spacing: -1px;
+        }
+
+        /* Responsive Grid */
+        .app-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+            list-style: none;
+            padding: 0;
+        }
+
+        .app-grid li {
+            transition: transform 0.2s ease;
+        }
+
+        .app-grid li:hover {
+            transform: translateY(-4px);
+        }
+
+        .app-grid a {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 80px;
+            padding: 0 20px;
+            background-color: var(--card-bg);
+            color: var(--primary-color);
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .app-grid a:hover {
+            background-color: var(--primary-color);
+            color: #fff;
+            box-shadow: 0 10px 15px rgba(67, 97, 238, 0.3);
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 480px) {
+            body { padding: 15px; }
+            h1 { font-size: 1.8rem; }
+            .app-grid { grid-template-columns: 1fr; }
+            .app-grid a { height: 65px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>App Collection</h1>
+        <ul class="app-grid">
+            <li><a href="https://cs127127.github.io/app/score-check" target="_blank">Highest Score Calculator</a></li>
+            <li><a href="https://cs127127.github.io/app/p-calculator" target="_blank">Probability Calculator</a></li>
+            <li><a href="https://cs127127.github.io/app/xiangqi" target="_blank">中国象棋 (Xiang Qi)</a></li>
+            <li><a href="https://cs127127.github.io/app/gesture-particle" target="_blank">Gesture Control Particle</a></li>
+            <li><a href="https://cs127127.github.io/app/writing-tool" target="_blank">Simple Writing Tool</a></li>
+            <li><a href="https://cs127127.github.io/app/screen-share" target="_blank">Screen Share Tool</a></li>
+        </ul>
+    </div>
+
+</body>
+</html>
